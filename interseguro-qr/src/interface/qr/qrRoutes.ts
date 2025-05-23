@@ -1,12 +1,16 @@
 import { Router } from "express";
 import { QRController } from "./qrController.js";
+import { AuthMiddleware } from "../auth/authMiddleware.js";
 
 /**
  * Creates and configures the router for QR factorization endpoints
  * @param qrController The controller for QR factorization and matrix operations
  * @returns The configured router
  */
-export function qrRouter(qrController: QRController): Router {
+export function qrRouter(
+  authMiddleware: AuthMiddleware,
+  qrController: QRController
+): Router {
   const router = Router();
 
   /**
@@ -15,8 +19,10 @@ export function qrRouter(qrController: QRController): Router {
    *   post:
    *     summary: Perform QR factorization and additional matrix operations
    *     description: Decomposes a matrix into its Q (orthogonal) and R (upper triangular) components and performs additional matrix operations
+   *     security:
+   *       - bearerAuth: []
    *     tags:
-   *       - Matrix Operations
+   *       - QR Factorization
    *     requestBody:
    *       required: true
    *       content:
@@ -94,6 +100,15 @@ export function qrRouter(qrController: QRController): Router {
    *               properties:
    *                 error:
    *                   type: string
+   *       401:
+   *         description: Unauthorized
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
    *       500:
    *         description: Server error
    *         content:
@@ -106,7 +121,7 @@ export function qrRouter(qrController: QRController): Router {
    *                 details:
    *                   type: string
    */
-  router.post("/matrix/qr", qrController.factorize);
+  router.post("/matrix/qr", authMiddleware.execute, qrController.factorize);
 
   return router;
 }

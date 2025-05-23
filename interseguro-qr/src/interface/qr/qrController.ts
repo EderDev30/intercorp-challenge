@@ -20,8 +20,9 @@ export class QRController {
   factorize = async (req: Request, res: Response): Promise<void> => {
     try {
       const { matrix } = req.body;
+      const token = req.headers.authorization?.split(" ")[1];
 
-      const result = await this.qrUseCase.execute(matrix);
+      const result = await this.qrUseCase.execute(matrix, token!);
 
       res.json(result);
     } catch (error) {

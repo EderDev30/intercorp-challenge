@@ -20,15 +20,19 @@ export class QRFactorizationUseCase {
   /**
    * Performs QR factorization on a matrix and fetches matrix operations
    * @param inputMatrix The matrix to QR factorize
+   * @param token The authorization token
    * @returns The QR factorization and matrix operations result
    * @throws Error if the input is not a valid matrix or if QR factorization fails or the external API call fails
    */
-  async execute(inputMatrix: unknown): Promise<MatrixResult> {
+  async execute(inputMatrix: unknown, token: string): Promise<MatrixResult> {
     const validMatrix: Matrix = validateMatrixForQR(inputMatrix);
 
     const qrResult = await this.qrService.factorize(validMatrix);
 
-    const result = await this.matrixService.fetchMatrixOperations(qrResult);
+    const result = await this.matrixService.fetchMatrixOperations(
+      qrResult,
+      token
+    );
 
     return {
       ...qrResult,
