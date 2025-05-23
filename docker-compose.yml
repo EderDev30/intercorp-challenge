@@ -1,13 +1,17 @@
 version: "3.8"
 
 services:
-  interseguro-operations:
+  # Auth service - handles user login and token generation
+  interseguro-auth:
     build:
-      context: ./interseguro-operations
+      context: ./interseguro-auth
       dockerfile: Dockerfile
-    container_name: interseguro-operations
+    container_name: interseguro-auth
     ports:
-      - "3001:3001"
+      - "3000:3000" # Primary auth service
+    environment:
+      - PORT=3000
+      - SECRET_KEY=your_jwt_secret_key # Should be changed in production
     networks:
       - interseguro-network
     healthcheck:
@@ -18,23 +22,86 @@ services:
           "--no-verbose",
           "--tries=1",
           "--spider",
-          "http://localhost:3001/",
+          "http://localhost:3000/",
         ]
       interval: 10s
       timeout: 5s
       retries: 5
 
+  # Authorization service - handles token validation
+  interseguro-authz:
+    build:
+      context: ./interseguro-authz
+      dockerfile: Dockerfile
+    container_name: interseguro-authz
+    ports:
+      - "3003:3003" # Token validation service
+    environment:
+      - PORT=3003
+      - SECRET_KEY=your_jwt_secret_key # Should match auth service key
+    networks:
+      - interseguro-network
+    depends_on:
+      interseguro-auth:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3003/",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Matrix operations service
+  interseguro-operations:
+    build:
+      context: ./interseguro-operations
+      dockerfile: Dockerfile
+    container_name: interseguro-operations
+    ports:
+      - "3002:3002" # Matrix operations service
+    environment:
+      - PORT=3002
+      - AUTH_VALIDATOR_API_URL=http://interseguro-authz:3003
+    networks:
+      - interseguro-network
+    depends_on:
+      interseguro-authz:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3002/",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # QR Factorization service
   interseguro-qr:
     build:
       context: ./interseguro-qr
       dockerfile: Dockerfile
     container_name: interseguro-qr
     ports:
-      - "3000:3000"
+      - "3001:3001" # QR factorization service
+    environment:
+      - PORT=3001
+      - MATRIX_API_URL=http://interseguro-operations:3002
+      - AUTH_VALIDATOR_API_URL=http://interseguro-authz:3003
     networks:
       - interseguro-network
-    environment:
-      - MATRIX_API_URL=http://interseguro-operations:3001
     depends_on:
       interseguro-operations:
         condition: service_healthy
