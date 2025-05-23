@@ -17,8 +17,6 @@ RUN npm install --production
 
 COPY --from=builder /app/dist ./dist
 
-EXPOSE 3001
+EXPOSE 3002
 
-ENV PORT=3001
-
-CMD ["node", "dist/index.js"] 
+CMD ["node", "dist/index.js"]

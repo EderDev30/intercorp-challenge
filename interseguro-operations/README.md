@@ -1,31 +1,34 @@
 # Interseguro Matrix Operations API
 
-A REST API built with Express.js and TypeScript that consumes QR factorization results and performs additional matrix operations, implemented using Hexagonal Architecture.
+A REST API built with Express.js and TypeScript that performs statistical operations on QR factorization matrices, secured through an external authentication service.
 
 ## Overview
 
-This API consumes the results of QR factorization from the [Interseguro QR Factorization API](../interseguro-qr) and performs additional matrix operations:
+This API performs statistical analysis on Q and R matrices received from the QR factorization service. It calculates:
 
-1. Calculates the maximum value across both Q and R matrices
-2. Calculates the minimum value across both Q and R matrices
-3. Calculates the average value of all elements in both matrices
-4. Calculates the total sum of all elements in both matrices
-5. Determines if either Q or R is a diagonal matrix (all non-diagonal elements are zero)
+1. Maximum value across both Q and R matrices
+2. Minimum value across both Q and R matrices
+3. Average value of all elements
+4. Total sum of all elements
+5. Diagonal matrix detection (checks if Q or R is diagonal)
+
+All endpoints are secured through integration with the authorization service.
 
 ## Architecture
 
-This project follows the Hexagonal Architecture pattern (also known as Ports and Adapters), dividing the code into these layers:
+This project follows the Hexagonal Architecture pattern with these layers:
 
-- **Domain Layer**: Contains the core business logic, entities, and port interfaces
-- **Application Layer**: Contains application services and use cases
-- **Infrastructure Layer**: Contains implementations of the interfaces defined in the domain
-- **Interface Layer**: Contains controllers, routes, and the API interface
+- **Domain Layer**: Core business logic and interfaces
+- **Application Layer**: Use cases for matrix operations
+- **Infrastructure Layer**: Services implementation and external integrations
+- **Interface Layer**: Controllers, routes, and middleware
 
 ## Technology Stack
 
 - TypeScript
 - Node.js
 - Express.js
+- Axios (for HTTP client)
 - Swagger (for API documentation)
 
 ## Installation
@@ -52,17 +55,32 @@ npm run build
 npm start
 ```
 
-The server will start on port 3001 by default. You can change this by setting the `PORT` environment variable.
+The server runs on port 3002 by default.
+
+## Environment Variables
+
+Create a `.env` file with:
+
+```env
+AUTH_API_URL=http://localhost:3003    # Auth service URL for token validation
+PORT=3002
+```
 
 ## API Documentation
 
-The API is documented using Swagger. You can access the documentation by visiting `/api/docs` when the server is running.
+Access the Swagger documentation at `/api/docs` when the server is running.
 
 ### API Endpoints
 
 #### POST /api/matrix/operations
 
-Processes a QR factorization result provided in the request body.
+Performs statistical operations on Q and R matrices.
+
+**Authentication Required:**
+
+```
+Authorization: Bearer <jwt_token>
+```
 
 **Request Body:**
 
@@ -85,43 +103,56 @@ Processes a QR factorization result provided in the request body.
 ```json
 {
   "maxValue": 1.7321,
-  "minValue": 0,
+  "minValue": -0.5773,
   "averageValue": 0.866,
   "totalSum": 6.9284,
   "hasDiagonalMatrix": false
 }
 ```
 
-## Environment Variables
-
-- `PORT`: The port on which the server will run (default: 3001)
-
 ## Project Structure
 
 ```
 src/
-├── domain/            # Domain layer
-│   └── matrix/
-│       ├── entities.ts    # Domain entities
-│       └── interfaces.ts  # Domain interfaces (ports)
+├── domain/                # Domain layer
+│   ├── auth/             # Auth domain types
+│   │   ├── entities.ts   # User and token types
+│   │   └── interfaces.ts # Auth validator contracts
+│   └── matrix/           # Matrix operations domain
+│       ├── entities.ts   # Matrix and result types
+│       └── interfaces.ts # Matrix operations contracts
 │
-├── application/       # Application layer
-│   └── matrix/
-│       └── matrixOperationsUseCase.ts  # Use case
+├── application/          # Application layer
+│   ├── auth/            # Auth validation use cases
+│   │   └── authValidatorUseCase.ts  # Token validation orchestration
+│   └── matrix/          # Matrix operations use cases
+│       └── matrixOperationsUseCase.ts
 │
-├── infrastructure/    # Infrastructure layer
-│   └── matrix/
-│       └── matrixService.ts       # Matrix operations service
+├── infrastructure/       # Infrastructure layer
+│   ├── auth/            # External auth service client
+│   │   └── httpAuthValidator.ts   # Auth service HTTP client
+│   └── matrix/          # Matrix operations implementation
+│       └── matrixService.ts
 │
-├── interface/         # Interface layer
-│   ├── matrix/
-│   │   ├── matrixController.ts    # API controller
-│   │   └── matrixRoutes.ts        # API routes
-│   └── swagger/
-│       └── swaggerConfig.ts       # Swagger configuration
+├── interface/           # Interface layer
+│   ├── auth/           # Auth middleware
+│   │   └── authMiddleware.ts    # Token validation middleware
+│   ├── matrix/         # Matrix operations endpoints
+│   │   ├── matrixController.ts
+│   │   └── matrixRoutes.ts
+│   └── swagger/        # API documentation
+│       └── swaggerConfig.ts
 │
-└── index.ts           # Application entry point
+└── index.ts            # Application entry point
 ```
+
+## Service Integration
+
+This service integrates with the authorization service (`interseguro-authz`):
+
+- All endpoints are protected by JWT token validation
+- Token validation is performed by making HTTP calls to the auth service
+- Invalid tokens result in 401 Unauthorized responses
 
 ## License
 

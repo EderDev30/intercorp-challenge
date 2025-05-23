@@ -1,12 +1,17 @@
 import { Router } from "express";
 import { MatrixController } from "./matrixController.js";
+import { AuthMiddleware } from "../auth/authMiddleware.js";
 
 /**
  * Creates and configures the router for matrix operations endpoints
+ * @param authMiddleware The authentication middleware
  * @param matrixController The controller for matrix operations
  * @returns The configured router
  */
-export function matrixRouter(matrixController: MatrixController): Router {
+export function matrixRouter(
+  authMiddleware: AuthMiddleware,
+  matrixController: MatrixController
+): Router {
   const router = Router();
 
   /**
@@ -15,6 +20,8 @@ export function matrixRouter(matrixController: MatrixController): Router {
    *   post:
    *     summary: Perform operations on QR factorization result
    *     description: Calculate statistical operations on the QR factorization matrices
+   *     security:
+   *       - bearerAuth: []
    *     tags:
    *       - Matrix Operations
    *     requestBody:
@@ -82,6 +89,15 @@ export function matrixRouter(matrixController: MatrixController): Router {
    *               properties:
    *                 error:
    *                   type: string
+   *       401:
+   *         description: Unauthorized
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
    *       500:
    *         description: Server error
    *         content:
@@ -94,7 +110,11 @@ export function matrixRouter(matrixController: MatrixController): Router {
    *                 details:
    *                   type: string
    */
-  router.post("/operations", matrixController.performMatrixOperations);
+  router.post(
+    "/operations",
+    authMiddleware.execute,
+    matrixController.performMatrixOperations
+  );
 
   return router;
 }
